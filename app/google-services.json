@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "878014221392",
+    "firebase_url": "https://pixframe-e0173.firebaseio.com",
+    "project_id": "pixframe-e0173",
+    "storage_bucket": "pixframe-e0173.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:878014221392:android:1c02e1a86f2021a0c41555",
+        "android_client_info": {
+          "package_name": "com.example.pixframe"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "878014221392-cutk287ciefv9u5e7qod9foud0jur04k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuFHYT105wBuL8WKBj4yrcFzn2Q68ssbQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "878014221392-cutk287ciefv9u5e7qod9foud0jur04k.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
