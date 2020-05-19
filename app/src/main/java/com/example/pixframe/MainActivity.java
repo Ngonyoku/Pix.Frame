@@ -3,6 +3,10 @@ package com.example.pixframe;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
 import android.app.Dialog;
 import android.content.ContentResolver;
@@ -13,23 +17,32 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.MimeTypeMap;
-import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.pixframe.adapters.PhotosRVAdapter;
+import com.example.pixframe.dialogs.LoadingDialog;
 import com.example.pixframe.model.Photos;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.StorageTask;
 import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     public static final int PICK_IMAGE_REQUEST = 1;
@@ -37,32 +50,75 @@ public class MainActivity extends AppCompatActivity {
     private boolean isShown;
 
     private Dialog uploadDialog;
+    private LoadingDialog loadingDialog;
     private TextView choose_tv, capture_tv;
     private ImageView selectedPhoto_btn;
     private FloatingActionButton choose_fab, capture_fab;
+    private Toolbar toolbar;
+    private ProgressBar loadingProgress;
+
+    private RecyclerView recyclerView;
+    private StaggeredGridLayoutManager layoutManager;
+    private PhotosRVAdapter rvAdapter;
+    private List<Photos> photosList;
     private Uri imageUri;
     //Firebase
     private StorageReference storageRef;
-    private DatabaseReference databaseRef;
+    private DatabaseReference databaseRef, getDBRef;
+    private StorageTask storageTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        recyclerView = findViewById(R.id.recyclerView);
         choose_tv = findViewById(R.id.tv_choose);
         capture_tv = findViewById(R.id.tv_capture);
         choose_fab = findViewById(R.id.fab_choose);
         capture_fab = findViewById(R.id.fab_capture);
-
-        uploadDialog = new Dialog(this);
-        uploadDialog.setContentView(R.layout.dialog_upload_photo);
-        uploadDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-        isShown = true;
+        toolbar = findViewById(R.id.toolbar);
+        loadingProgress = findViewById(R.id.loading_prgrss);
 
         storageRef = FirebaseStorage.getInstance().getReference("Photos");
         databaseRef = FirebaseDatabase.getInstance().getReference("Photos");
+        getDBRef = FirebaseDatabase.getInstance().getReference("Photos");
+
+        recyclerView.setHasFixedSize(true);
+        layoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
+
+        photosList = new ArrayList<>();
+        rvAdapter = new PhotosRVAdapter(MainActivity.this, photosList);
+        recyclerView.setLayoutManager(layoutManager);
+
+        loadingDialog = new LoadingDialog(this);
+        uploadDialog = new Dialog(MainActivity.this);
+
+        setSupportActionBar(toolbar);
+        uploadDialog.setContentView(R.layout.dialog_upload_photo);
+        uploadDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        recyclerView.setAdapter(rvAdapter);
+
+        getDBRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                photosList.clear();
+                for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
+                    Photos upload = postSnapshot.getValue(Photos.class);
+                    photosList.add(upload);
+                }
+                rvAdapter.notifyDataSetChanged();
+                loadingProgress.setVisibility(View.INVISIBLE);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Toast.makeText(MainActivity.this, databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+                loadingProgress.setVisibility(View.INVISIBLE);
+            }
+        });
+        isShown = true;
 
         choose_fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -143,19 +199,26 @@ public class MainActivity extends AppCompatActivity {
 
     public void uploadPhoto(final String caption) {
         if (imageUri != null) {
+            loadingDialog.startLoading();
             StorageReference fileRef = storageRef.child(System.currentTimeMillis()
                     + "."
                     + getFileExtension(imageUri));
 
             //Upload the image File to Firebase
-            fileRef.putFile(imageUri)
+            storageTask = fileRef.putFile(imageUri)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+
                             Toast.makeText(MainActivity.this, "Upload was SuccessFul", Toast.LENGTH_SHORT).show();
-                            Photos photo = new Photos(
-                                    caption,
-                                    taskSnapshot.getMetadata().getReference().getDownloadUrl().toString());
+                            loadingDialog.dismissDialog();
+
+                            Task<Uri> urlTask = taskSnapshot.getStorage().getDownloadUrl();
+                            while (!urlTask.isSuccessful()) ;
+                            Uri downloadUrl = urlTask.getResult();
+
+
+                            Photos photo = new Photos(caption, downloadUrl.toString());
 
                             //Set Database Metadata For The Image.
                             String uploadId = databaseRef.push().getKey();
@@ -166,12 +229,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onFailure(@NonNull Exception e) {
                             Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    })
-                    .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onProgress(@NonNull UploadTask.TaskSnapshot taskSnapshot) {
-
+                            loadingDialog.dismissDialog();
                         }
                     });
         } else {
