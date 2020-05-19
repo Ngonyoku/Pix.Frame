@@ -3,4 +3,6 @@
     <string name="choose_photo">Choose Local</string>
     <string name="take_pic">Capture</string>
     <string name="exit">Exit</string>
+    <string name="upload">UPLOAD</string>
+    <string name="select_other">REPLACE</string>
 </resources>
