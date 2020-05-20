@@ -38,7 +38,7 @@ public class PhotosRVAdapter extends RecyclerView.Adapter<PhotosRVAdapter.Photos
         Photos photos = photosList.get(position);
         Picasso.get().
                 load(photos.getImageUrl())
-                .placeholder(R.color.colorPrimaryLight)
+                .placeholder(R.color.colorGrayLight)
                 .into(holder.photo);
     }
 

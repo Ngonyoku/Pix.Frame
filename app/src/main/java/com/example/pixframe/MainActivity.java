@@ -15,6 +15,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
@@ -154,7 +155,11 @@ public class MainActivity extends AppCompatActivity {
                 setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        uploadPhoto(caption_ted.getText().toString());
+                        if (storageTask != null && storageTask.isInProgress()) {
+                            Toast.makeText(MainActivity.this, "Upload In Progress", Toast.LENGTH_SHORT).show();
+                        } else {
+                            uploadPhoto(caption_ted.getText().toString());
+                        }
                     }
                 });
 
@@ -167,6 +172,14 @@ public class MainActivity extends AppCompatActivity {
                 });
 
         uploadDialog.show();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        return true;
     }
 
     public void chooseImage() {
