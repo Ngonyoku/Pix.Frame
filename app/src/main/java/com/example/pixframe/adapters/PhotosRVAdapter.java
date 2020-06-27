@@ -20,7 +20,6 @@ public class PhotosRVAdapter extends RecyclerView.Adapter<PhotosRVAdapter.Photos
     private Context context;
     private List<Photos> photosList;
 
-
     public PhotosRVAdapter(Context context, List<Photos> list) {
         this.context = context;
         this.photosList = list;
@@ -36,9 +35,8 @@ public class PhotosRVAdapter extends RecyclerView.Adapter<PhotosRVAdapter.Photos
     @Override
     public void onBindViewHolder(@NonNull PhotosViewHolder holder, int position) {
         Photos photos = photosList.get(position);
-        Picasso.get().
-                load(photos.getImageUrl())
-                .placeholder(R.color.colorGrayLight)
+        Picasso.get()
+                .load(photos.getImageUrl())
                 .into(holder.photo);
     }
 
@@ -46,7 +44,6 @@ public class PhotosRVAdapter extends RecyclerView.Adapter<PhotosRVAdapter.Photos
     public int getItemCount() {
         return photosList.size();
     }
-
 
     public class PhotosViewHolder extends RecyclerView.ViewHolder {
         public ImageView photo;
