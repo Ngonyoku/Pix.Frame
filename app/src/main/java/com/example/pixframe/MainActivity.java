@@ -7,8 +7,10 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ContentResolver;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -19,22 +21,19 @@ import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.pixframe.adapters.PhotosRVAdapter;
-import com.example.pixframe.dialogs.LoadingDialog;
+import com.example.pixframe.dialogs.DialogBuilder;
 import com.example.pixframe.model.Photos;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.StorageTask;
 import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
@@ -45,12 +44,9 @@ import java.util.Objects;
 public class MainActivity extends AppCompatActivity {
     public static final int PICK_IMAGE_REQUEST = 1;
     public static String FIREBASE_PHOTOS_REF = "Photos";
-    private boolean isShown;
 
     private Dialog uploadDialog;
-    private TextView choose_tv, capture_tv;
     private ImageView mPhotoSelected;
-    private FloatingActionButton choose_fab, capture_fab;
     private ProgressBar mProgressBar;
 
     private PhotosRVAdapter rvAdapter;
@@ -65,10 +61,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        choose_tv = findViewById(R.id.tv_choose);
-        capture_tv = findViewById(R.id.tv_capture);
-        choose_fab = findViewById(R.id.fab_choose);
-        capture_fab = findViewById(R.id.fab_capture);
         Toolbar toolbar = findViewById(R.id.toolbar);
         mProgressBar = findViewById(R.id.loading_prgrss);
 
@@ -80,14 +72,6 @@ public class MainActivity extends AppCompatActivity {
         uploadDialog.setContentView(R.layout.dialog_upload_photo);
         Objects.requireNonNull(uploadDialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-        isShown = true;
-
-        choose_fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                chooseImage();
-            }
-        });
     }
 
     public ValueEventListener eventListener(final List<Photos> photosList) {
@@ -140,22 +124,22 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setHasFixedSize(true);
     }
 
-    public void showFabs(View view) {
-        if (isShown) {
-            choose_tv.setVisibility(View.VISIBLE);
-            capture_tv.setVisibility(View.VISIBLE);
-            choose_fab.setVisibility(View.VISIBLE);
-            capture_fab.setVisibility(View.VISIBLE);
+    public void chooseImage(View view) {
+        DialogBuilder.createDialog(new AlertDialog.Builder(this)
+                .setPositiveButton("Select Photo", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        chooseImageFromDevice();
+                    }
+                })
+                .setNegativeButton("Take Photo", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
 
-            isShown = false;
-        } else {
-            choose_tv.setVisibility(View.INVISIBLE);
-            capture_tv.setVisibility(View.INVISIBLE);
-            choose_fab.setVisibility(View.INVISIBLE);
-            capture_fab.setVisibility(View.INVISIBLE);
-
-            isShown = true;
-        }
+                    }
+                })
+                .setTitle("Upload Image")
+        );
     }
 
     void openDialog() {
@@ -178,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
                 .setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        chooseImage();
+                        chooseImageFromDevice();
                     }
                 });
 
@@ -193,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    public void chooseImage() {
+    public void chooseImageFromDevice() {
         Intent pick = new Intent();
         startActivityForResult(pick
                         .setType("image/*")

@@ -30,61 +30,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/toolbar" />
 
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
-        android:id="@+id/coordinatorLayout4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-
-        app:layout_constraintBottom_toTopOf="@+id/coordinatorLayout2"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0">
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab_choose"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="8dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:src="@drawable/ic_choose_photo"
-            android:tint="@color/colorWhite"
-            android:visibility="invisible"
-            app:rippleColor="@color/colorAccentDark" />
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
-        android:id="@+id/coordinatorLayout2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-
-        app:layout_constraintBottom_toTopOf="@+id/fab_1"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0">
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab_capture"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="8dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:src="@drawable/ic_camera"
-            android:tint="@color/colorWhite"
-            android:visibility="invisible"
-            app:rippleColor="@color/colorAccentDark" />
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -107,41 +52,12 @@
             android:layout_margin="16dp"
             android:clickable="true"
             android:focusable="true"
-            android:onClick="showFabs"
+            android:onClick="chooseImage"
             android:src="@drawable/ic_add"
             android:tint="@color/colorWhite"
             app:rippleColor="@color/colorAccentDark" />
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
-    <TextView
-        android:id="@+id/tv_choose"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/fab_label_background"
-        android:paddingStart="10dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="10dp"
-        android:paddingBottom="4dp"
-        android:text="@string/choose_photo"
-        android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="@+id/coordinatorLayout4"
-        app:layout_constraintEnd_toStartOf="@+id/coordinatorLayout4"
-        app:layout_constraintTop_toTopOf="@+id/coordinatorLayout4" />
-
-    <TextView
-        android:id="@+id/tv_capture"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/fab_label_background"
-        android:paddingStart="10dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="10dp"
-        android:paddingBottom="4dp"
-        android:text="@string/take_pic"
-        android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="@+id/coordinatorLayout2"
-        app:layout_constraintEnd_toStartOf="@+id/coordinatorLayout2"
-        app:layout_constraintTop_toBottomOf="@+id/coordinatorLayout4" />
 
     <ProgressBar
         android:id="@+id/loading_prgrss"
