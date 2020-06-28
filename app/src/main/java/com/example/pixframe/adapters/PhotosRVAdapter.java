@@ -8,27 +8,41 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.pixframe.FirebaseUtil;
+import com.example.pixframe.MainActivity;
 import com.example.pixframe.R;
 import com.example.pixframe.model.Photos;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.storage.StorageReference;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
 public class PhotosRVAdapter extends RecyclerView.Adapter<PhotosRVAdapter.PhotosViewHolder> {
-    private Context context;
     private List<Photos> photosList;
+    private StorageReference storageRef;
+    private DatabaseReference databaseRef;
 
-    public PhotosRVAdapter(Context context, List<Photos> list) {
-        this.context = context;
-        this.photosList = list;
+    public PhotosRVAdapter(MainActivity mainActivity) {
+        FirebaseUtil.openFirebaseReference(MainActivity.FIREBASE_PHOTOS_REF);
+        storageRef = FirebaseUtil.mStorageReference;
+        databaseRef = FirebaseUtil.mDatabaseReference;
+        this.photosList = FirebaseUtil.mPhotosList;
+
+        // This method enables our App to receive updates in Realtime
+        databaseRef.addValueEventListener(mainActivity.eventListener(photosList));
     }
 
     @NonNull
     @Override
     public PhotosViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_photos, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_photos, parent, false);
         return new PhotosViewHolder(view);
     }
 

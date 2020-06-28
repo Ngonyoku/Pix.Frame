@@ -33,16 +33,14 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.StorageTask;
 import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
     public static final int PICK_IMAGE_REQUEST = 1;
@@ -50,20 +48,15 @@ public class MainActivity extends AppCompatActivity {
     private boolean isShown;
 
     private Dialog uploadDialog;
-    private LoadingDialog loadingDialog;
     private TextView choose_tv, capture_tv;
     private ImageView mPhotoSelected;
     private FloatingActionButton choose_fab, capture_fab;
-    private Toolbar toolbar;
-    private ProgressBar loadingProgress;
+    private ProgressBar mProgressBar;
 
-    private RecyclerView recyclerView;
-    private StaggeredGridLayoutManager layoutManager;
     private PhotosRVAdapter rvAdapter;
-    private List<Photos> photosList;
     private Uri mImageUri;
+
     //Firebase
-    private StorageReference storageRef;
     private DatabaseReference databaseRef;
     private StorageTask storageTask;
 
@@ -76,55 +69,17 @@ public class MainActivity extends AppCompatActivity {
         capture_tv = findViewById(R.id.tv_capture);
         choose_fab = findViewById(R.id.fab_choose);
         capture_fab = findViewById(R.id.fab_capture);
-        toolbar = findViewById(R.id.toolbar);
-        loadingProgress = findViewById(R.id.loading_prgrss);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        mProgressBar = findViewById(R.id.loading_prgrss);
 
         FirebaseUtil.openFirebaseReference(FIREBASE_PHOTOS_REF);
-        storageRef = FirebaseUtil.mStorageReference;
         databaseRef = FirebaseUtil.mDatabaseReference;
-
-        photosList = new ArrayList<>();
-
-        loadingDialog = new LoadingDialog(this);
         uploadDialog = new Dialog(MainActivity.this);
 
         setSupportActionBar(toolbar);
         uploadDialog.setContentView(R.layout.dialog_upload_photo);
-        uploadDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        Objects.requireNonNull(uploadDialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-
-        // This method enables our App to receive updates in Realtime
-        databaseRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                /*
-                 * onDataChange() reads static snapshots of contents in the specified path in the
-                 * db. The method is triggered when data changes in the specified DatabaseReference
-                 * (databaseRef) in the db.
-                 *
-                 */
-                photosList.clear();
-                for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                    //We Loop Through the data.
-                    Photos upload = postSnapshot.getValue(Photos.class);
-                    photosList.add(upload);
-                }
-
-                rvAdapter.notifyDataSetChanged();
-                loadingProgress.setVisibility(View.INVISIBLE);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                /*
-                 * onCancelled() is Called when if the read is Cancelled e.g if the User doesn't have
-                 * permission to access the data.
-                 *
-                 */
-                Toast.makeText(MainActivity.this, databaseError.getMessage(), Toast.LENGTH_SHORT).show();
-                loadingProgress.setVisibility(View.INVISIBLE);
-            }
-        });
         isShown = true;
 
         choose_fab.setOnClickListener(new View.OnClickListener() {
@@ -135,6 +90,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public ValueEventListener eventListener(final List<Photos> photosList) {
+        return new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                /*
+                 * onDataChange() reads static snapshots of contents in the specified path in the
+                 * db. The method is triggered when data changes in the specified DatabaseReference
+                 * (databaseRef) in the db.
+                 *
+                 */
+                photosList.clear();
+                for (DataSnapshot postSnapshot : snapshot.getChildren()) {
+                    //We Loop Through the data.
+                    Photos upload = postSnapshot.getValue(Photos.class);
+                    photosList.add(upload);
+                }
+
+                rvAdapter.notifyDataSetChanged();
+                mProgressBar.setVisibility(View.INVISIBLE);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                /*
+                 * onCancelled() is Called when if the read is Cancelled e.g if the User doesn't have
+                 * permission to access the data.
+                 *
+                 */
+                Toast.makeText(MainActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
+                mProgressBar.setVisibility(View.INVISIBLE);
+            }
+        };
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -142,10 +131,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadPhotos() {
-        recyclerView = findViewById(R.id.recyclerView);
-        rvAdapter = new PhotosRVAdapter(MainActivity.this, photosList);
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
+//        rvAdapter = new PhotosRVAdapter(MainActivity.this, photosList);
+        rvAdapter = new PhotosRVAdapter(this);
         recyclerView.setAdapter(rvAdapter);
-        layoutManager = new StaggeredGridLayoutManager(1, StaggeredGridLayoutManager.VERTICAL);
+        StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(1, StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setHasFixedSize(true);
     }
@@ -179,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
                         if (storageTask != null && storageTask.isInProgress()) {
                             Toast.makeText(MainActivity.this, R.string.upload_message, Toast.LENGTH_SHORT).show();
                         } else {
-                            uploadPhoto(caption_ted.getText().toString());
+                            uploadPhoto(Objects.requireNonNull(caption_ted.getText()).toString());
                         }
                     }
                 });
@@ -236,20 +226,12 @@ public class MainActivity extends AppCompatActivity {
     public void uploadPhoto(final String caption) {
         if (mImageUri != null) {
 
-            loadingDialog.startLoading();
-            StorageReference fileRef = storageRef.child(System.currentTimeMillis()
-                    + "."
-                    + getFileExtension(mImageUri));
-
-            //Upload the image File to Firebase
-            storageTask = fileRef.putFile(mImageUri)
+            FirebaseUtil.getStorageTask(mImageUri, getFileExtension(mImageUri))
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
 
                             Toast.makeText(MainActivity.this, R.string.upload_successful, Toast.LENGTH_SHORT).show();
-                            loadingDialog.dismissDialog();
-
                             Task<Uri> urlTask = taskSnapshot.getStorage().getDownloadUrl();
                             while (!urlTask.isSuccessful()) ;
                             Uri downloadUrl = urlTask.getResult();
@@ -258,6 +240,7 @@ public class MainActivity extends AppCompatActivity {
 
                             //Set Database Metadata For The Image.
                             String uploadId = databaseRef.push().getKey();
+                            assert uploadId != null;
                             databaseRef.child(uploadId).setValue(photo);
                         }
                     })
@@ -265,9 +248,9 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onFailure(@NonNull Exception e) {
                             Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
-                            loadingDialog.dismissDialog();
                         }
                     });
+
         } else {
             Toast.makeText(this, "No File Selected", Toast.LENGTH_SHORT).show();
         }
