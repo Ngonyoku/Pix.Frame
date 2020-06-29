@@ -52,10 +52,12 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
     public static final int REQUEST_SELECT_IMAGE = 1;
+    public static final String IMAGE_FILE_AUTHORITY = "com.example.pixFrame.fileprovider";
     public static String FIREBASE_PHOTOS_REF = "Photos";
     static final int REQUEST_IMAGE_CAPTURE = 2;
     static final int REQUEST_TAKE_PHOTO = 3;
@@ -168,24 +170,24 @@ public class MainActivity extends AppCompatActivity {
 //        }
             Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-//            File photoFile = null;
-//            try {
-//                photoFile = createImageFile();
-//            } catch (IOException ex) {
-//                //Error occurred while creating the imageFile.
-//                Toast.makeText(this, ex.getMessage(), Toast.LENGTH_SHORT).show();
-//                Log.e("ImageFileCreation", ex.getMessage());
-//            }
+                File photoFile = null;
+                try {
+                    photoFile = createImageFile();
+                } catch (IOException ex) {
+                    //Error occurred while creating the imageFile.
+                    Toast.makeText(this, ex.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e("ImageFileCreation", ex.getMessage());
+                }
 
-//            if (photoFile != null) {
-//                Uri photoUri = FileProvider.getUriForFile(
-//                        this,
-//                        "com.example.pixFrame.fileprovider", /*Authority*/
-//                        photoFile
-//                );
-//
-//                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-//            }
+                if (photoFile != null) {
+                    Uri photoUri = FileProvider.getUriForFile(
+                            this,
+                            IMAGE_FILE_AUTHORITY, /*Authority*/
+                            photoFile
+                    );
+
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                }
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
             }
         }
@@ -213,26 +215,32 @@ public class MainActivity extends AppCompatActivity {
 
         } else if (requestCode == REQUEST_IMAGE_CAPTURE
                 && resultCode != RESULT_CANCELED) {
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
+//            Bundle extras = data.getExtras();
+//            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            mImageUri = FileProvider.getUriForFile(
+                    this,
+                    IMAGE_FILE_AUTHORITY,
+                    new File(currentPhotoPath)
+            );
             openDialog();
-            mPhotoSelected.setImageBitmap(imageBitmap);
+            Picasso.get().load(mImageUri).into(mPhotoSelected);
+//            mPhotoSelected.setImageBitmap(imageBitmap);
         }
     }
 
-//    private File createImageFile() throws IOException {
-//        String timestamp = new SimpleDateFormat("yyyyMMd_HHmmss").format(new Date());
-//        String imageFileName = "JPEG_" + timestamp + "_";
-//        File storageDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-//        File image = File.createTempFile(
-//                imageFileName,      /*Prefix*/
-//                ".jpg",       /*suffix*/
-//                storageDirectory    /*directory*/
-//        );
-//
-//        currentPhotoPath = image.getAbsolutePath();
-//        return image;
-//    }
+    private File createImageFile() throws IOException {
+        String timestamp = new SimpleDateFormat("yyyyMMd_HHmmss", Locale.getDefault()).format(new Date());
+        String imageFileName = "JPEG_" + timestamp + "_";
+        File storageDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,      /*Prefix*/
+                ".jpg",       /*suffix*/
+                storageDirectory    /*directory*/
+        );
+
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
+    }
 
     void openDialog() {
         final TextInputEditText caption_ted = uploadDialog.findViewById(R.id.ted_caption);
