@@ -1,4 +1,4 @@
-package com.example.pixframe;
+package com.example.pixFrame;
 
 import org.junit.Test;
 

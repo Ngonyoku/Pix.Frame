@@ -1,4 +1,4 @@
-package com.example.pixframe.model;
+package com.example.pixFrame.model;
 
 public class Photos {
     private String imageUrl, title;
