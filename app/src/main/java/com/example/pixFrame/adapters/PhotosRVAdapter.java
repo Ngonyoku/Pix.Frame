@@ -1,6 +1,5 @@
-package com.example.pixframe.adapters;
+package com.example.pixFrame.adapters;
 
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,16 +7,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.pixframe.FirebaseUtil;
-import com.example.pixframe.MainActivity;
-import com.example.pixframe.R;
-import com.example.pixframe.model.Photos;
-import com.google.firebase.database.ChildEventListener;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
+import com.example.pixFrame.FirebaseUtil;
+import com.example.pixFrame.MainActivity;
+import com.example.pixFrame.R;
+import com.example.pixFrame.model.Photos;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.storage.StorageReference;
 import com.squareup.picasso.Picasso;

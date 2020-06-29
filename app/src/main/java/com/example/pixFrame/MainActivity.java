@@ -1,21 +1,30 @@
-package com.example.pixframe;
+package com.example.pixFrame;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.webkit.MimeTypeMap;
@@ -23,9 +32,9 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.example.pixframe.adapters.PhotosRVAdapter;
-import com.example.pixframe.dialogs.DialogBuilder;
-import com.example.pixframe.model.Photos;
+import com.example.pixFrame.adapters.PhotosRVAdapter;
+import com.example.pixFrame.dialogs.DialogBuilder;
+import com.example.pixFrame.model.Photos;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -38,12 +47,20 @@ import com.google.firebase.storage.StorageTask;
 import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
-    public static final int PICK_IMAGE_REQUEST = 1;
+    public static final int REQUEST_SELECT_IMAGE = 1;
     public static String FIREBASE_PHOTOS_REF = "Photos";
+    static final int REQUEST_IMAGE_CAPTURE = 2;
+    static final int REQUEST_TAKE_PHOTO = 3;
+
+    String currentPhotoPath;
 
     private Dialog uploadDialog;
     private ImageView mPhotoSelected;
@@ -129,18 +146,93 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Select Photo", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        chooseImageFromDevice();
+                        openFileChooser();
                     }
                 })
                 .setNegativeButton("Take Photo", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-
+                        takePicture();
                     }
                 })
                 .setTitle("Upload Image")
         );
     }
+
+    private void takePicture() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_IMAGE_CAPTURE);
+        } else {
+//        else if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_IMAGE_CAPTURE);
+//        }
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+//            File photoFile = null;
+//            try {
+//                photoFile = createImageFile();
+//            } catch (IOException ex) {
+//                //Error occurred while creating the imageFile.
+//                Toast.makeText(this, ex.getMessage(), Toast.LENGTH_SHORT).show();
+//                Log.e("ImageFileCreation", ex.getMessage());
+//            }
+
+//            if (photoFile != null) {
+//                Uri photoUri = FileProvider.getUriForFile(
+//                        this,
+//                        "com.example.pixFrame.fileprovider", /*Authority*/
+//                        photoFile
+//                );
+//
+//                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+//            }
+                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+            }
+        }
+    }
+
+//    private void addImageToGallery() {
+//        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+//        File f = new File(currentPhotoPath);
+//        Uri contentUri = Uri.fromFile(f);
+//        mediaScanIntent.setData(contentUri);
+//        this.sendBroadcast(mediaScanIntent);
+//    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SELECT_IMAGE
+                && resultCode == RESULT_OK
+                && data != null
+                && data.getData() != null) {
+
+            mImageUri = data.getData();
+            openDialog();
+            Picasso.get().load(mImageUri).into(mPhotoSelected);
+
+        } else if (requestCode == REQUEST_IMAGE_CAPTURE
+                && resultCode != RESULT_CANCELED) {
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            openDialog();
+            mPhotoSelected.setImageBitmap(imageBitmap);
+        }
+    }
+
+//    private File createImageFile() throws IOException {
+//        String timestamp = new SimpleDateFormat("yyyyMMd_HHmmss").format(new Date());
+//        String imageFileName = "JPEG_" + timestamp + "_";
+//        File storageDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+//        File image = File.createTempFile(
+//                imageFileName,      /*Prefix*/
+//                ".jpg",       /*suffix*/
+//                storageDirectory    /*directory*/
+//        );
+//
+//        currentPhotoPath = image.getAbsolutePath();
+//        return image;
+//    }
 
     void openDialog() {
         final TextInputEditText caption_ted = uploadDialog.findViewById(R.id.ted_caption);
@@ -162,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
                 .setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        chooseImageFromDevice();
+                        openFileChooser();
                     }
                 });
 
@@ -177,27 +269,13 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    public void chooseImageFromDevice() {
+    public void openFileChooser() {
         Intent pick = new Intent();
         startActivityForResult(pick
                         .setType("image/*")
                         .setAction(Intent.ACTION_GET_CONTENT),
-                PICK_IMAGE_REQUEST
+                REQUEST_SELECT_IMAGE
         );
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE_REQUEST
-                && resultCode == RESULT_OK
-                && data != null
-                && data.getData() != null) {
-
-            mImageUri = data.getData();
-            openDialog();
-            Picasso.get().load(mImageUri).into(mPhotoSelected);
-        }
     }
 
     private String getFileExtension(Uri uri) {

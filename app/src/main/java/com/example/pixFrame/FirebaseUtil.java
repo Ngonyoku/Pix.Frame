@@ -1,8 +1,8 @@
-package com.example.pixframe;
+package com.example.pixFrame;
 
 import android.net.Uri;
 
-import com.example.pixframe.model.Photos;
+import com.example.pixFrame.model.Photos;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
