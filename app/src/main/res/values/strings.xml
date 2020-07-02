@@ -8,4 +8,9 @@
     <string name="select_other">REPLACE</string>
     <string name="upload_message">Upload In Progress</string>
     <string name="upload_successful">Upload was SuccessFul</string>
+    <string name="logout">Logout</string>
+    <string name="no_file_selected">No File Selected</string>
+    <string name="permission_needed_title">Permission Needed</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
 </resources>

@@ -11,13 +11,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
@@ -26,15 +26,18 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.example.pixFrame.adapters.PhotosRVAdapter;
+import com.example.pixFrame.adapters.ImageRecyclerViewAdapter;
 import com.example.pixFrame.dialogs.DialogBuilder;
 import com.example.pixFrame.model.Photos;
+import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -55,7 +58,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-public class MainActivity extends AppCompatActivity {
+import static com.example.pixFrame.dialogs.DialogBuilder.*;
+
+public class ImageListActivity extends AppCompatActivity {
     public static final int REQUEST_SELECT_IMAGE = 1;
     public static final String IMAGE_FILE_AUTHORITY = "com.example.pixFrame.fileprovider";
     public static String FIREBASE_PHOTOS_REF = "Photos";
@@ -68,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView mPhotoSelected;
     private ProgressBar mProgressBar;
 
-    private PhotosRVAdapter rvAdapter;
+    private ImageRecyclerViewAdapter rvAdapter;
     private Uri mImageUri;
 
     //Firebase
@@ -83,9 +88,9 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         mProgressBar = findViewById(R.id.loading_prgrss);
 
-        FirebaseUtil.openFirebaseReference(FIREBASE_PHOTOS_REF);
+        FirebaseUtil.openFirebaseReference(FIREBASE_PHOTOS_REF, ImageListActivity.this);
         databaseRef = FirebaseUtil.mDatabaseReference;
-        uploadDialog = new Dialog(MainActivity.this);
+        uploadDialog = new Dialog(ImageListActivity.this);
 
         setSupportActionBar(toolbar);
         uploadDialog.setContentView(R.layout.dialog_upload_photo);
@@ -121,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
                  * permission to access the data.
                  *
                  */
-                Toast.makeText(MainActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(ImageListActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
                 mProgressBar.setVisibility(View.INVISIBLE);
             }
         };
@@ -130,13 +135,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        FirebaseUtil.attachListener();
         loadPhotos();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        FirebaseUtil.detachListener();
     }
 
     private void loadPhotos() {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
-//        rvAdapter = new PhotosRVAdapter(MainActivity.this, photosList);
-        rvAdapter = new PhotosRVAdapter(this);
+        rvAdapter = new ImageRecyclerViewAdapter(this);
         recyclerView.setAdapter(rvAdapter);
         StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(1, StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
@@ -162,12 +173,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void takePicture() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_IMAGE_CAPTURE);
-        } else {
-//        else if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_IMAGE_CAPTURE);
-//        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
             Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
                 File photoFile = null;
@@ -190,10 +197,47 @@ public class MainActivity extends AppCompatActivity {
                 }
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
             }
+        } else {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+                createDialog(
+                        new AlertDialog.Builder(this)
+                                .setTitle(R.string.permission_needed_title)
+                                .setMessage("Please grant us permission to Access the camera so you can have a smooth interaction with the App")
+                                .setPositiveButton(getString(R.string.ok), new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        ActivityCompat.requestPermissions(
+                                                ImageListActivity.this,
+                                                new String[]{Manifest.permission.CAMERA},
+                                                REQUEST_IMAGE_CAPTURE
+                                        );
+                                    }
+                                })
+                                .setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.dismiss();
+                                    }
+                                })
+                );
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_IMAGE_CAPTURE);
+            }
         }
     }
 
-//    private void addImageToGallery() {
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_IMAGE_CAPTURE) {
+            if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+            } else {
+                takePicture();
+            }
+        }
+    }
+
+    //    private void addImageToGallery() {
 //        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 //        File f = new File(currentPhotoPath);
 //        Uri contentUri = Uri.fromFile(f);
@@ -215,8 +259,6 @@ public class MainActivity extends AppCompatActivity {
 
         } else if (requestCode == REQUEST_IMAGE_CAPTURE
                 && resultCode != RESULT_CANCELED) {
-//            Bundle extras = data.getExtras();
-//            Bitmap imageBitmap = (Bitmap) extras.get("data");
             mImageUri = FileProvider.getUriForFile(
                     this,
                     IMAGE_FILE_AUTHORITY,
@@ -224,7 +266,6 @@ public class MainActivity extends AppCompatActivity {
             );
             openDialog();
             Picasso.get().load(mImageUri).into(mPhotoSelected);
-//            mPhotoSelected.setImageBitmap(imageBitmap);
         }
     }
 
@@ -251,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         if (storageTask != null && storageTask.isInProgress()) {
-                            Toast.makeText(MainActivity.this, R.string.upload_message, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ImageListActivity.this, R.string.upload_message, Toast.LENGTH_SHORT).show();
                         } else {
                             uploadPhoto(Objects.requireNonNull(caption_ted.getText()).toString());
                         }
@@ -277,6 +318,28 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_logout:
+                signOut();
+                return true;
+            case R.id.menu_exit:
+                finish();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void signOut() {
+        AuthUI.getInstance().signOut(this).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Toast.makeText(ImageListActivity.this, "You are Logged Out", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     public void openFileChooser() {
         Intent pick = new Intent();
         startActivityForResult(pick
@@ -300,8 +363,6 @@ public class MainActivity extends AppCompatActivity {
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-
-                            Toast.makeText(MainActivity.this, R.string.upload_successful, Toast.LENGTH_SHORT).show();
                             Task<Uri> urlTask = taskSnapshot.getStorage().getDownloadUrl();
                             while (!urlTask.isSuccessful()) ;
                             Uri downloadUrl = urlTask.getResult();
@@ -312,17 +373,18 @@ public class MainActivity extends AppCompatActivity {
                             String uploadId = databaseRef.push().getKey();
                             assert uploadId != null;
                             databaseRef.child(uploadId).setValue(photo);
+                            Toast.makeText(ImageListActivity.this, R.string.upload_successful, Toast.LENGTH_SHORT).show();
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
-                            Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                            Toast.makeText(ImageListActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
 
         } else {
-            Toast.makeText(this, "No File Selected", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.no_file_selected, Toast.LENGTH_SHORT).show();
         }
     }
 }

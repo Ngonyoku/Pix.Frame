@@ -10,7 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.pixFrame.FirebaseUtil;
-import com.example.pixFrame.MainActivity;
+import com.example.pixFrame.ImageListActivity;
 import com.example.pixFrame.R;
 import com.example.pixFrame.model.Photos;
 import com.google.firebase.database.DatabaseReference;
@@ -19,19 +19,19 @@ import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
-public class PhotosRVAdapter extends RecyclerView.Adapter<PhotosRVAdapter.PhotosViewHolder> {
+public class ImageRecyclerViewAdapter extends RecyclerView.Adapter<ImageRecyclerViewAdapter.PhotosViewHolder> {
     private List<Photos> photosList;
     private StorageReference storageRef;
     private DatabaseReference databaseRef;
 
-    public PhotosRVAdapter(MainActivity mainActivity) {
-        FirebaseUtil.openFirebaseReference(MainActivity.FIREBASE_PHOTOS_REF);
+    public ImageRecyclerViewAdapter(ImageListActivity imageListActivity) {
+        FirebaseUtil.openFirebaseReference(ImageListActivity.FIREBASE_PHOTOS_REF, new ImageListActivity());
         storageRef = FirebaseUtil.mStorageReference;
         databaseRef = FirebaseUtil.mDatabaseReference;
         this.photosList = FirebaseUtil.mPhotosList;
 
         // This method enables our App to receive updates in Realtime
-        databaseRef.addValueEventListener(mainActivity.eventListener(photosList));
+        databaseRef.addValueEventListener(imageListActivity.eventListener(photosList));
     }
 
     @NonNull
