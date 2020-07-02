@@ -57,7 +57,6 @@ public class FirebaseUtil {
                     if (firebaseAuth.getCurrentUser() == null) {
                         FirebaseUtil.signIn();
                     }
-                    Toast.makeText(callerActivity, "Welcome Back", Toast.LENGTH_LONG).show();
                 }
             };
 
